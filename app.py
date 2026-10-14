@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
 from flask import Flask, jsonify, render_template
@@ -5,10 +6,15 @@ from flask import Flask, jsonify, render_template
 DB = Path(__file__).resolve().parent / "data" / "orders.sqlite3"
 app = Flask(__name__)
 
+@contextmanager
 def connect():
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
-    return con
+    try:
+        with con:  # commit o rollback
+            yield con
+    finally:
+        con.close()
 
 @app.get("/")
 def index():
