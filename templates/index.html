@@ -40,8 +40,10 @@ async function loadOrders() {
       status.append(badge); row.append(status);
       const action = document.createElement("td");
       const button = document.createElement("button");
-      button.textContent = "Marcar como enviado";
-      button.disabled = order.status === "enviado";
+      // Solo los pendientes se pueden enviar; el servidor valida igualmente.
+      button.disabled = order.status !== "pendiente";
+      button.textContent = {enviado: "Ya enviado", cancelado: "No disponible"}[order.status] || "Marcar como enviado";
+      if (order.status === "cancelado") button.title = "Los pedidos cancelados no se pueden enviar";
       button.onclick = () => ship(order.id, button);
       action.append(button); row.append(action); body.append(row);
     }
