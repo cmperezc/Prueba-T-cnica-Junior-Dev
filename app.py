@@ -31,6 +31,10 @@ def ship(order_id):
                 return jsonify(error="Pedido no encontrado."), 404
             if row["status"] == "enviado":
                 return jsonify(error="El pedido ya está enviado."), 409
+            if row["status"] == "cancelado":
+                return jsonify(error="No se puede enviar un pedido cancelado."), 409
+            if row["status"] != "pendiente":
+                return jsonify(error="Solo los pedidos pendientes se pueden enviar."), 409
             con.execute("UPDATE orders SET status = 'enviado' WHERE id = ?", (order_id,))
             updated = con.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
         return jsonify(dict(updated))
