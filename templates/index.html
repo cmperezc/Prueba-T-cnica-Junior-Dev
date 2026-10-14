@@ -7,10 +7,20 @@
 </head>
 <body>
 <main><header><div><small>PYMEDESK</small><h1>Gestión de pedidos</h1><p>Consulta y actualiza el estado de los pedidos.</p></div><span id="count"></span></header>
+<div id="notice" role="status" aria-live="polite" hidden></div>
 <section><div class="scroll"><table><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="orders"><tr><td colspan="5">Cargando pedidos…</td></tr></tbody></table></div></section></main>
 <script>
 const body = document.querySelector("#orders");
 const count = document.querySelector("#count");
+const notice = document.querySelector("#notice");
+let noticeTimer;
+function showNotice(message, type) {
+  clearTimeout(noticeTimer);
+  notice.textContent = message;
+  notice.className = type;
+  notice.hidden = false;
+  if (type === "success") noticeTimer = setTimeout(() => { notice.hidden = true; }, 4000);
+}
 const money = new Intl.NumberFormat("es-CO", {style:"currency",currency:"COP",maximumFractionDigits:0});
 async function loadOrders() {
   try {
@@ -41,13 +51,23 @@ async function loadOrders() {
 }
 async function ship(id, button) {
   button.disabled = true;
+  button.textContent = "Enviando…";
+  let response;
   try {
-    const response = await fetch(`/api/orders/${id}/ship`, {method:"POST"});
-    if (!response.ok) throw new Error();
-    await loadOrders();
+    response = await fetch(`/api/orders/${id}/ship`, {method:"POST"});
   } catch {
+    showNotice("No hay conexión con el servidor. Revisa tu conexión e inténtalo de nuevo.", "error");
     button.disabled = false;
+    button.textContent = "Marcar como enviado";
+    return;
   }
+  if (response.ok) {
+    showNotice(`Pedido #${id} marcado como enviado.`, "success");
+  } else {
+    const data = await response.json().catch(() => ({}));
+    showNotice(`No se pudo enviar el pedido #${id}: ${data.error || "error inesperado del servidor."}`, "error");
+  }
+  await loadOrders();
 }
 loadOrders();
 </script>
