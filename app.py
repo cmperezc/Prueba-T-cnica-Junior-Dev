@@ -26,18 +26,20 @@ def orders():
 def ship(order_id):
     try:
         with connect() as con:
+            # Actualización condicional: solo cambia si sigue pendiente, evitando condiciones de carrera.
+            cur = con.execute(
+                "UPDATE orders SET status = 'enviado' WHERE id = ? AND status = 'pendiente'", (order_id,)
+            )
             row = con.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
-            if row is None:
-                return jsonify(error="Pedido no encontrado."), 404
-            if row["status"] == "enviado":
-                return jsonify(error="El pedido ya está enviado."), 409
-            if row["status"] == "cancelado":
-                return jsonify(error="No se puede enviar un pedido cancelado."), 409
-            if row["status"] != "pendiente":
-                return jsonify(error="Solo los pedidos pendientes se pueden enviar."), 409
-            con.execute("UPDATE orders SET status = 'enviado' WHERE id = ?", (order_id,))
-            updated = con.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
-        return jsonify(dict(updated))
+        if cur.rowcount == 1:
+            return jsonify(dict(row))
+        if row is None:
+            return jsonify(error="Pedido no encontrado."), 404
+        if row["status"] == "enviado":
+            return jsonify(error="El pedido ya está enviado."), 409
+        if row["status"] == "cancelado":
+            return jsonify(error="No se puede enviar un pedido cancelado."), 409
+        return jsonify(error="Solo los pedidos pendientes se pueden enviar."), 409
     except sqlite3.Error:
         return jsonify(error="No se pudo actualizar el pedido."), 500
 
