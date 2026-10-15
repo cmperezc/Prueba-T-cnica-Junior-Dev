@@ -110,3 +110,48 @@ rm data/orders.sqlite3 && .venv/bin/python seed.py     # restaurar datos de ejem
   - *Authenticated Origin Pulls* (mTLS entre Cloudflare y nginx).
   - `real_ip_header CF-Connecting-IP` para registrar la IP real del cliente en los logs de nginx.
 - Configura una alerta en **AWS Budgets** y libera la IP elástica y termina la instancia al acabar.
+
+## Despliegue continuo (GitHub Actions + OIDC + SSM)
+
+Cada push a `main` ejecuta [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml):
+
+1. GitHub obtiene **credenciales temporales** de AWS por OIDC. No hay llaves guardadas en GitHub.
+2. Con **SSM Run Command**, el servidor hace `git pull` y ejecuta [`deploy/update.sh`](update.sh): dependencias, servicio, nginx y reinicio. No se abre el SSH a internet.
+3. Se verifica que el sitio responda.
+
+### Configuración (una sola vez)
+
+1. **Rol de la instancia:** en IAM → *Roles* → *Create role*, elige *AWS service* → EC2 y la política `AmazonSSMManagedInstanceCore`, y nómbralo `pymedesk-ec2-ssm`. Luego, en EC2 → instancia → *Actions → Security → Modify IAM role*, asígnaselo.
+2. **Proveedor OIDC:** en IAM → *Identity providers* → *Add provider* → OpenID Connect.
+   - URL: `https://token.actions.githubusercontent.com`
+   - Audience: `sts.amazonaws.com`
+3. **Rol para GitHub:** en IAM → *Roles* → *Create role*, elige *Web identity* con ese proveedor y la audiencia `sts.amazonaws.com`.
+   - GitHub organization: `cmperezc`
+   - Repository: `Prueba-T-cnica-Junior-Dev`
+   - Branch: `main`
+
+   Nómbralo `pymedesk-github-deploy` y agrégale esta política en línea:
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": "ssm:SendCommand",
+         "Resource": [
+           "arn:aws:ec2:us-east-1:<ACCOUNT_ID>:instance/<INSTANCE_ID>",
+           "arn:aws:ssm:us-east-1::document/AWS-RunShellScript"
+         ]
+       },
+       {
+         "Effect": "Allow",
+         "Action": ["ssm:GetCommandInvocation", "ssm:ListCommandInvocations"],
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+4. **Secretos del repo:** en GitHub → *Settings → Secrets and variables → Actions*, crea:
+   - `AWS_ROLE_ARN`: el ARN del rol `pymedesk-github-deploy`.
+   - `EC2_INSTANCE_ID`: el ID de la instancia.
