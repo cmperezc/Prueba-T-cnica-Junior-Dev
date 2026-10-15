@@ -16,6 +16,11 @@
 
 ## Cómo lo comprobé
 
+- **Tests automáticos (`pytest`):** 8 tests con el `test_client` de Flask sobre una base temporal: envío de pendiente, rechazo de cancelado (sigue cancelado), ya enviado, inexistente, base ausente (500 sin crear archivo) y el reset de demo. En GitHub Actions corren antes de cada deploy; si fallan, no se despliega.
+  ```bash
+  pip install -r requirements-dev.txt
+  pytest
+  ```
 - **API:** pedido cancelado → 409 y sigue cancelado. Pendiente → 200 y queda enviado. Repetido → 409. Inexistente → 404. Con 10 peticiones simultáneas al mismo pedido → un 200 y nueve 409.
 - **Interfaz (Chromium con Playwright, escritorio y 390 px):** aviso de éxito, aviso de error del servidor, red caída simulada y error 500 con HTML simulado. Sin errores de JavaScript en consola.
 - **Manual:**
@@ -33,5 +38,4 @@ AWS EC2 (Ubuntu 24.04) con nginx, gunicorn y SQLite, detrás de Cloudflare con S
 
 ## Pendiente / con más tiempo
 
-- **Tests automáticos** con pytest y el `test_client` de Flask para las transiciones de estado.
 - **Producción real:** autenticación (hoy cualquiera con la URL puede enviar pedidos), Postgres (RDS) si hay varias instancias, y guardar la clave del certificado en AWS Secrets Manager o Parameter Store.
