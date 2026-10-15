@@ -1,23 +1,57 @@
-# Despliegue en AWS EC2
+# Despliegue en AWS EC2 detrás de Cloudflare
 
-Arquitectura: navegador → **nginx** (:80, sirve `/static`) → **gunicorn** (127.0.0.1:8000, 2 workers) → Flask → SQLite en disco (EBS).
+```
+navegador ──HTTPS──▶ Cloudflare (proxy, TLS de borde)
+                         │ HTTPS · certificado de origen · SSL "Full (strict)"
+                         ▼
+          EC2 · security group: 80/443 solo desde IPs de Cloudflare
+          nginx (:443, sirve /static, cabeceras de seguridad)
+             ▼
+          gunicorn (127.0.0.1:8000, 2 workers · systemd)
+             ▼
+          Flask → SQLite en disco EBS
+```
 
-## 1. Crear la instancia (consola web)
+En los pasos, `pedidos.tudominio.com` es el subdominio de ejemplo.
 
-1. EC2 → **Launch instance**.
+## 1. AWS (consola web)
+
+1. **Prefix list de Cloudflare.** Ve a VPC → *Managed prefix lists* → *Create*.
+   - Nombre: `cloudflare-ipv4`.
+   - Familia: IPv4.
+   - Max entries: 20.
+   - Entradas: los rangos de <https://www.cloudflare.com/ips-v4>.
+2. **Instancia.** Ve a EC2 → *Launch instance*.
    - AMI: **Ubuntu Server 24.04 LTS**.
    - Tipo: **t3.micro**.
    - Key pair: crea uno y descarga el `.pem`.
-2. Security group:
-   - SSH (22) → **My IP**.
-   - HTTP (80) → **Anywhere**.
-3. Lanza la instancia y copia su **IPv4 pública**.
+   - Security group nuevo:
 
-## 2. Instalar la app
+     | Tipo | Puerto | Origen |
+     |---|---|---|
+     | SSH | 22 | My IP |
+     | HTTP | 80 | prefix list `cloudflare-ipv4` |
+     | HTTPS | 443 | prefix list `cloudflare-ipv4` |
+
+3. **IP elástica.** Ve a EC2 → *Elastic IPs* → *Allocate* y luego *Associate* a la instancia. Así la IP no cambia al detener la instancia.
+
+## 2. Cloudflare (dashboard)
+
+1. **DNS** → *Add record*: tipo `A`, nombre `pedidos`, IPv4 = la IP elástica, **Proxied** (nube naranja).
+2. **SSL/TLS → Origin Server** → *Create certificate*.
+   - Clave RSA.
+   - Hostnames: `pedidos.tudominio.com`.
+   - Validez: 15 años.
+   - Copia el **certificado** y la **clave privada**. La clave solo se muestra una vez.
+3. **SSL/TLS → Overview** → modo **Full (strict)**.
+   - Si el dominio tiene otros sitios, no cambies el modo global. Crea en *Rules → Configuration Rules* una regla con `Hostname equals pedidos.tudominio.com` → SSL: *Full (strict)*.
+4. **SSL/TLS → Edge Certificates** → activa **Always Use HTTPS**.
+
+## 3. Instalar la app (SSH)
 
 ```bash
 chmod 400 mi-llave.pem
-ssh -i mi-llave.pem ubuntu@<IP_PUBLICA>
+ssh -i mi-llave.pem ubuntu@<IP_ELASTICA>
 
 sudo apt update && sudo apt install -y python3-venv nginx git
 sudo git clone https://github.com/cmperezc/Prueba-T-cnica-Junior-Dev.git /opt/pymedesk
@@ -28,7 +62,16 @@ python3 -m venv .venv
 .venv/bin/python seed.py
 ```
 
-## 3. Servicio y proxy
+## 4. Certificado de origen
+
+```bash
+sudo mkdir -p /etc/ssl/cloudflare
+sudo nano /etc/ssl/cloudflare/origin.pem   # pega el certificado
+sudo nano /etc/ssl/cloudflare/origin.key   # pega la clave privada
+sudo chmod 600 /etc/ssl/cloudflare/origin.key
+```
+
+## 5. Servicio y nginx
 
 ```bash
 sudo cp deploy/pymedesk.service /etc/systemd/system/
@@ -41,19 +84,27 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Abre `http://<IP_PUBLICA>`.
+## 6. Verificar
+
+```bash
+curl -I https://pedidos.tudominio.com                   # 200, "server: cloudflare"
+curl -i -X POST https://pedidos.tudominio.com/api/orders/3/ship  # 409, pedido cancelado
+curl -m 5 -I http://<IP_ELASTICA>                       # timeout: solo Cloudflare puede llegar al origen
+```
 
 ## Operación
 
 ```bash
-sudo systemctl status pymedesk                    # estado
-sudo journalctl -u pymedesk -f                    # logs
-git pull && sudo systemctl restart pymedesk       # actualizar
-rm data/orders.sqlite3 && .venv/bin/python seed.py  # restaurar datos de ejemplo
+sudo systemctl status pymedesk                         # estado
+sudo journalctl -u pymedesk -f                         # logs de la app
+git pull && sudo systemctl restart pymedesk            # actualizar
+rm data/orders.sqlite3 && .venv/bin/python seed.py     # restaurar datos de ejemplo
 ```
 
 ## Notas
 
 - La app no tiene autenticación: cualquiera con la URL puede marcar pedidos como enviados. Es aceptable para una demo, pero no para producción.
-- Sin dominio no hay HTTPS. Con un dominio, se agrega con `certbot --nginx`.
-- Configura una alerta en **AWS Budgets** y detén o termina la instancia al acabar.
+- Mejoras posibles:
+  - *Authenticated Origin Pulls* (mTLS entre Cloudflare y nginx).
+  - `real_ip_header CF-Connecting-IP` para registrar la IP real del cliente en los logs de nginx.
+- Configura una alerta en **AWS Budgets** y libera la IP elástica y termina la instancia al acabar.
