@@ -15,4 +15,4 @@ systemctl reload nginx
 
 sleep 2
 systemctl is-active pymedesk
-git log --oneline -1
+sudo -u ubuntu git log --oneline -1  # el repo es de ubuntu; git rechaza leerlo como root
