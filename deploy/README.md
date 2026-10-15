@@ -130,6 +130,8 @@ Cada push a `main` ejecuta [`.github/workflows/deploy.yml`](../.github/workflows
    - Repository: `Prueba-T-cnica-Junior-Dev`
    - Branch: `main`
 
+   **Revisa el `sub` de la trust policy.** GitHub usa *sujetos inmutables* (con los IDs del dueño y del repo), y el asistente de AWS genera el formato antiguo. Consulta el prefijo real en `https://api.github.com/repos/<dueño>/<repo>/actions/oidc/customization/sub` y usa `<sub_claim_prefix>:ref:refs/heads/main` con `StringEquals`. Si no coincide, el deploy falla con `Not authorized to perform sts:AssumeRoleWithWebIdentity`.
+
    Nómbralo `pymedesk-github-deploy` y agrégale esta política en línea:
 
    ```json
