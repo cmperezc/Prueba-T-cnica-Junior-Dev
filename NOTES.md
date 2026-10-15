@@ -21,6 +21,10 @@
   curl -i -X POST http://127.0.0.1:5000/api/orders/3/ship   # 409, sigue cancelado
   ```
 
+## Despliegue
+
+Desplegado en AWS EC2 con nginx, gunicorn y SQLite. Los pasos están en [`deploy/README.md`](deploy/README.md).
+
 ## Pendiente / con más tiempo
 
 - **Base de datos inexistente:** si no se ejecuta `seed.py`, `sqlite3.connect` crea un archivo vacío y la API responde "No se pudieron cargar los pedidos". Propuesta: validar al arrancar y mostrar "Ejecuta `python seed.py`".
