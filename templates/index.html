@@ -4,12 +4,13 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pedidos | Pymedesk</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=css_version) }}">
 </head>
 <body>
-<main><header><div><small>PYMEDESK</small><h1>Gestión de pedidos</h1><p>Consulta y actualiza el estado de los pedidos.</p></div><div class="actions"><span id="count"></span>{% if demo_mode %}<button id="reset" class="secondary">Restaurar datos de ejemplo</button>{% endif %}</div></header>
+<main><header><div><small>PYMEDESK</small><h1>Gestión de pedidos</h1><p>Consulta y actualiza el estado de los pedidos.</p></div><span id="count"></span></header>
 <div id="notice" role="status" aria-live="polite" hidden></div>
-<section><div class="scroll"><table><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="orders"><tr><td colspan="5">Cargando pedidos…</td></tr></tbody></table></div></section></main>
+<section><div class="scroll"><table><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="orders"><tr><td colspan="5">Cargando pedidos…</td></tr></tbody></table></div></section>
+{% if demo_mode %}<footer class="demo"><span>Modo demo: cualquiera puede modificar los pedidos.</span><button id="reset" class="secondary">Restaurar datos de ejemplo</button></footer>{% endif %}</main>
 <script>
 const body = document.querySelector("#orders");
 const count = document.querySelector("#count");

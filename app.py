@@ -5,7 +5,8 @@ import sqlite3
 from flask import Flask, jsonify, render_template
 from seed import read_orders
 
-DB = Path(__file__).resolve().parent / "data" / "orders.sqlite3"
+ROOT = Path(__file__).resolve().parent
+DB = ROOT / "data" / "orders.sqlite3"
 app = Flask(__name__)
 # Solo en el despliegue público: permite restaurar los datos de ejemplo.
 DEMO_MODE = os.environ.get("DEMO_MODE") == "1"
@@ -23,7 +24,9 @@ def connect():
 
 @app.get("/")
 def index():
-    return render_template("index.html", demo_mode=DEMO_MODE)
+    # La versión en la URL del CSS evita que nginx o Cloudflare sirvan uno viejo de la caché tras un deploy.
+    css_version = int((ROOT / "static" / "style.css").stat().st_mtime)
+    return render_template("index.html", demo_mode=DEMO_MODE, css_version=css_version)
 
 @app.get("/api/orders")
 def orders():
