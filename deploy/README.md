@@ -12,11 +12,13 @@ navegador ──HTTPS──▶ Cloudflare (proxy, TLS de borde)
           Flask → SQLite en disco EBS
 ```
 
-En los pasos, `pedidos.tudominio.com` es el subdominio de ejemplo.
+**En línea:** <https://pymedesk.varitia.com>
+
+En los pasos, `pedidos.tudominio.com` es el subdominio de ejemplo; en este despliegue es `pymedesk.varitia.com`.
 
 ## 1. AWS (consola web)
 
-1. **Prefix list de Cloudflare.** Ve a VPC → *Managed prefix lists* → *Create*.
+1. **Prefix list de Cloudflare.** Los visitantes entran por el dominio, así que al servidor solo se conecta Cloudflare. Si se aceptan únicamente sus IPs, nadie puede saltarse el proxy (ni su protección ni el HTTPS) entrando directo por la IP. Ve a VPC → *Managed prefix lists* → *Create*.
    - Nombre: `cloudflare-ipv4`.
    - Familia: IPv4.
    - Max entries: 20.

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pedidos | Pymedesk</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -48,6 +49,7 @@ async function loadOrders() {
       action.append(button); row.append(action); body.append(row);
     }
   } catch {
+    count.textContent = "";
     body.innerHTML = '<tr><td colspan="5">No se pudieron cargar los pedidos. Recarga la página.</td></tr>';
   }
 }

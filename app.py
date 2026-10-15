@@ -8,7 +8,8 @@ app = Flask(__name__)
 
 @contextmanager
 def connect():
-    con = sqlite3.connect(DB)
+    # mode=rw: no crea una base vacía si falta ejecutar seed.py.
+    con = sqlite3.connect(f"{DB.as_uri()}?mode=rw", uri=True)
     con.row_factory = sqlite3.Row
     try:
         with con:  # commit o rollback
@@ -26,6 +27,7 @@ def orders():
         with connect() as con:
             return jsonify([dict(row) for row in con.execute("SELECT * FROM orders ORDER BY id")])
     except sqlite3.Error:
+        app.logger.exception("Error al cargar los pedidos")
         return jsonify(error="No se pudieron cargar los pedidos."), 500
 
 @app.post("/api/orders/<int:order_id>/ship")
@@ -47,7 +49,10 @@ def ship(order_id):
             return jsonify(error="No se puede enviar un pedido cancelado."), 409
         return jsonify(error="Solo los pedidos pendientes se pueden enviar."), 409
     except sqlite3.Error:
+        app.logger.exception("Error al enviar el pedido %s", order_id)
         return jsonify(error="No se pudo actualizar el pedido."), 500
 
 if __name__ == "__main__":
+    if not DB.exists():
+        raise SystemExit("No existe la base de datos. Ejecuta primero: python seed.py")
     app.run(debug=True)
