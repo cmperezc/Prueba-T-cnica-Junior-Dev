@@ -29,6 +29,8 @@
 
 AWS EC2 (Ubuntu 24.04) con nginx, gunicorn y SQLite, detrás de Cloudflare con SSL *Full (strict)* y certificado de origen. El security group solo acepta tráfico web desde las IPs de Cloudflare. Los pasos están en [`deploy/README.md`](deploy/README.md).
 
+**Modo demo:** como el sitio es público, con `DEMO_MODE=1` (solo activado en el servidor) aparece el botón "Restaurar datos de ejemplo" y el endpoint `POST /api/demo/reset`, que recarga `data/orders.json`. En local no existen: el endpoint responde 404.
+
 ## Pendiente / con más tiempo
 
 - **Tests automáticos** con pytest y el `test_client` de Flask para las transiciones de estado.

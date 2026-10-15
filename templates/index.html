@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<main><header><div><small>PYMEDESK</small><h1>Gestión de pedidos</h1><p>Consulta y actualiza el estado de los pedidos.</p></div><span id="count"></span></header>
+<main><header><div><small>PYMEDESK</small><h1>Gestión de pedidos</h1><p>Consulta y actualiza el estado de los pedidos.</p></div><div class="actions"><span id="count"></span>{% if demo_mode %}<button id="reset" class="secondary">Restaurar datos de ejemplo</button>{% endif %}</div></header>
 <div id="notice" role="status" aria-live="polite" hidden></div>
 <section><div class="scroll"><table><thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="orders"><tr><td colspan="5">Cargando pedidos…</td></tr></tbody></table></div></section></main>
 <script>
@@ -73,6 +73,20 @@ async function ship(id, button) {
   }
   await loadOrders();
 }
+const reset = document.querySelector("#reset");
+if (reset) reset.onclick = async () => {
+  if (!confirm("¿Restaurar los pedidos a sus valores originales?")) return;
+  reset.disabled = true;
+  try {
+    const response = await fetch("/api/demo/reset", {method:"POST"});
+    if (!response.ok) throw new Error();
+    showNotice("Datos de ejemplo restaurados.", "success");
+  } catch {
+    showNotice("No se pudieron restaurar los datos de ejemplo. Inténtalo de nuevo.", "error");
+  }
+  reset.disabled = false;
+  await loadOrders();
+};
 loadOrders();
 </script>
 </body></html>

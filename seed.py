@@ -5,9 +5,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / "data" / "orders.sqlite3"
 
+def read_orders():
+    return json.loads((ROOT / "data" / "orders.json").read_text(encoding="utf-8"))
+
 def main():
     DB.parent.mkdir(exist_ok=True)
-    orders = json.loads((ROOT / "data" / "orders.json").read_text(encoding="utf-8"))
+    orders = read_orders()
     with sqlite3.connect(DB) as con:
         con.execute("""
             CREATE TABLE IF NOT EXISTS orders (

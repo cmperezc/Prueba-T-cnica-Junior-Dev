@@ -1,10 +1,14 @@
 from contextlib import contextmanager
+import os
 from pathlib import Path
 import sqlite3
 from flask import Flask, jsonify, render_template
+from seed import read_orders
 
 DB = Path(__file__).resolve().parent / "data" / "orders.sqlite3"
 app = Flask(__name__)
+# Solo en el despliegue público: permite restaurar los datos de ejemplo.
+DEMO_MODE = os.environ.get("DEMO_MODE") == "1"
 
 @contextmanager
 def connect():
@@ -19,7 +23,7 @@ def connect():
 
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", demo_mode=DEMO_MODE)
 
 @app.get("/api/orders")
 def orders():
@@ -51,6 +55,19 @@ def ship(order_id):
     except sqlite3.Error:
         app.logger.exception("Error al enviar el pedido %s", order_id)
         return jsonify(error="No se pudo actualizar el pedido."), 500
+
+@app.post("/api/demo/reset")
+def demo_reset():
+    if not DEMO_MODE:
+        return jsonify(error="No disponible."), 404
+    try:
+        with connect() as con:
+            con.execute("DELETE FROM orders")
+            con.executemany("INSERT INTO orders VALUES (:id, :customer, :total, :status)", read_orders())
+        return jsonify(ok=True)
+    except sqlite3.Error:
+        app.logger.exception("Error al restaurar los datos de ejemplo")
+        return jsonify(error="No se pudieron restaurar los datos de ejemplo."), 500
 
 if __name__ == "__main__":
     if not DB.exists():

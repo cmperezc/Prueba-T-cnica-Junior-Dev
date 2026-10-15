@@ -5,6 +5,7 @@ After=network.target
 [Service]
 User=ubuntu
 WorkingDirectory=/opt/pymedesk
+Environment=DEMO_MODE=1
 ExecStart=/opt/pymedesk/.venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 app:app
 Restart=on-failure
 
