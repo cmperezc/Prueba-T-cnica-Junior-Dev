@@ -16,7 +16,7 @@
 
 ## Cómo lo comprobé
 
-- **Tests automáticos (`pytest`):** 8 tests con el `test_client` de Flask sobre una base temporal: envío de pendiente, rechazo de cancelado (sigue cancelado), ya enviado, inexistente, base ausente (500 sin crear archivo) y el reset de demo. En GitHub Actions corren antes de cada deploy; si fallan, no se despliega.
+- **Tests automáticos (`pytest`):** 8 tests con el `test_client` de Flask sobre una base temporal: listado de pedidos, envío de pendiente, rechazo de cancelado (sigue cancelado), ya enviado, inexistente, base ausente (500 sin crear archivo) y el reset de demo. En GitHub Actions corren antes de cada deploy; si fallan, no se despliega.
   ```bash
   pip install -r requirements-dev.txt
   pytest
@@ -25,14 +25,15 @@
 - **Interfaz (Chromium con Playwright, escritorio y 390 px):** aviso de éxito, aviso de error del servidor, red caída simulada y error 500 con HTML simulado. Sin errores de JavaScript en consola.
 - **Manual:**
   ```bash
-  curl -i -X POST http://127.0.0.1:5000/api/orders/3/ship   # 409, sigue cancelado
+  curl -i -X POST http://127.0.0.1:5000/api/orders/3/ship          # 409, sigue cancelado
+  curl -i -X POST https://pymedesk.varitia.com/api/orders/3/ship    # igual en producción
   ```
 
 ## Despliegue
 
 **En línea:** <https://pymedesk.varitia.com>
 
-AWS EC2 (Ubuntu 24.04) con nginx, gunicorn y SQLite, detrás de Cloudflare con SSL *Full (strict)* y certificado de origen. El security group solo acepta tráfico web desde las IPs de Cloudflare. Los pasos están en [`deploy/README.md`](deploy/README.md).
+AWS EC2 (Ubuntu 24.04) con nginx, gunicorn y SQLite, detrás de Cloudflare con SSL *Full (strict)* y certificado de origen. El security group solo acepta tráfico web desde las IPs de Cloudflare. Cada push a `main` corre los tests en GitHub Actions y, si pasan, despliega con credenciales temporales de AWS (OIDC) y SSM Run Command, sin llaves guardadas ni SSH. El CSS se enlaza con `?v=<fecha de modificación>` para que Cloudflare no sirva una versión vieja tras un deploy. Los pasos están en [`deploy/README.md`](deploy/README.md).
 
 **Modo demo:** como el sitio es público, con `DEMO_MODE=1` (solo activado en el servidor) aparece el botón "Restaurar datos de ejemplo" y el endpoint `POST /api/demo/reset`, que recarga `data/orders.json`. En local no existen: el endpoint responde 404.
 
